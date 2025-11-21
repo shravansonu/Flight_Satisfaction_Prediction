@@ -16,7 +16,6 @@ venv/
 Thumbs.db
 
 # Model files
-*.pkl
 *.sav
 
 # Streamlit cache
