@@ -1,49 +1,90 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import pickle
 
-# -----------------------------
 # Load trained model
-# -----------------------------
-MODEL_PATH = "models/model.pkl"
+with open("models/model.pkl", "rb") as f:
+    model = pickle.load(f)
 
-@st.cache_resource
-def load_model():
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
-    return model
+st.title("Airline Passenger Satisfaction Prediction")
+st.write("Enter passenger details to predict satisfaction (Satisfied / Neutral or Dissatisfied)")
 
+# Input fields
+age = st.number_input("Age", min_value=1, max_value=100, value=25)
+flight_distance = st.number_input("Flight Distance", min_value=1, max_value=10000, value=500)
+departure_delay = st.number_input("Departure Delay in Minutes", min_value=0, max_value=500, value=0)
+arrival_delay = st.number_input("Arrival Delay in Minutes", min_value=0, max_value=500, value=0)
 
-# -----------------------------
-# Streamlit App UI
-# -----------------------------
-st.title("Flight Satisfaction Prediction App ✈️")
-st.write("Upload passenger data to predict whether they are **Satisfied** or **Dissatisfied**.")
+gender = st.selectbox("Gender", ["Male", "Female"])
+customer_type = st.selectbox("Customer Type", ["Loyal Customer", "disloyal Customer"])
+travel_type = st.selectbox("Type of Travel", ["Personal Travel", "Business travel"])
+class_type = st.selectbox("Class", ["Eco", "Eco Plus", "Business"])
 
-model = load_model()
+# Service ratings
+cols = [
+    "Inflight wifi service",
+    "Departure/Arrival time convenient",
+    "Ease of Online booking",
+    "Gate location",
+    "Food and drink",
+    "Online boarding",
+    "Seat comfort",
+    "Inflight entertainment",
+    "On-board service",
+    "Leg room service",
+    "Baggage handling",
+    "Checkin service",
+    "Inflight service",
+    "Cleanliness"
+]
 
-# Upload CSV
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+service_values = {}
+for col in cols:
+    service_values[col] = st.slider(col, 0, 5, 3)
 
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.write("### Preview of Uploaded Data")
-    st.dataframe(data.head())
+# Prepare input dataframe
+input_data = pd.DataFrame([{
+    "Age": age,
+    "Flight Distance": flight_distance,
+    "Departure Delay in Minutes": departure_delay,
+    "Arrival Delay in Minutes": arrival_delay,
+    "Gender": 1 if gender == "Male" else 0,
+    "Customer Type": 1 if customer_type == "Loyal Customer" else 0,
+    "Type of Travel": 1 if travel_type == "Business travel" else 0,
+    "Class": {"Eco": 0, "Eco Plus": 1, "Business": 2}[class_type],
+    **service_values
+}])
 
-    try:
-        # Predict
-        preds = model.predict(data)
+# ---- IMPORTANT ENGINEERED FEATURES (required by model) ----
 
-        st.write("### Prediction Results")
-        data["Prediction"] = preds
-        data["Prediction"] = data["Prediction"].map({1: "Satisfied", 0: "Dissatisfied"})
+# 1. Total Delay
+input_data["Total Delay"] = (
+    input_data["Departure Delay in Minutes"] +
+    input_data["Arrival Delay in Minutes"]
+)
 
-        st.dataframe(data)
+# 2. Average Service Rating
+service_cols = [
+    "Inflight wifi service",
+    "Departure/Arrival time convenient",
+    "Ease of Online booking",
+    "Gate location",
+    "Food and drink",
+    "Online boarding",
+    "Seat comfort",
+    "Inflight entertainment",
+    "On-board service",
+    "Leg room service",
+    "Baggage handling",
+    "Checkin service",
+    "Inflight service",
+    "Cleanliness"
+]
 
-    except Exception as e:
-        st.error(f"Error during prediction: {e}")
+input_data["Average Service Rating"] = input_data[service_cols].mean(axis=1)
 
-
-st.write("---")
-st.write("Built with ❤️ using Streamlit")
+# Predict
+if st.button("Predict Satisfaction"):
+    pred = model.predict(input_data)[0]
+    result = "Satisfied 😀" if pred == 1 else "Neutral or Dissatisfied 😐"
+    st.success(f"Prediction: {result}")
