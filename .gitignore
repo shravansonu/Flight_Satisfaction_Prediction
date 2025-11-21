@@ -1,0 +1,26 @@
+# Byte-compiled
+__pycache__/
+*.pyc
+*.pyo
+
+# Environments
+env/
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model files
+*.pkl
+*.sav
+
+# Streamlit cache
+.streamlit/
+
+# Logs
+*.log
